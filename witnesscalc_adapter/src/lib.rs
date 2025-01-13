@@ -81,7 +81,7 @@ pub fn build_and_link(circuits_dir: &str) {
         let circuit_files = fs::read_dir(circuits_dir)
             .expect("Failed to read circuits directory")
             .map(|entry| entry.unwrap().path())
-            .filter(|path| path.extension().unwrap() == "cpp")
+            .filter(|path| path.extension().is_some() && path.extension().unwrap() == "cpp")
             .collect::<Vec<_>>();
 
         // Copy each circuit .cpp and .dat into witnesscalc/src, replacing any existing files
