@@ -1,6 +1,6 @@
-pub use paste;
+use std::{env, fs, path::Path, process::Command};
 
-pub mod adapter;
+pub use paste;
 
 #[macro_export]
 macro_rules! witness {
@@ -21,4 +21,141 @@ macro_rules! witness {
                 }
             }
     };
+}
+
+const WITNESSCALC_BUILD_SCRIPT: &str = include_str!("../clone_witnesscalc.sh");
+
+pub fn build_and_link(circuits_dir: &str) {
+    let target = env::var("TARGET").expect("Cargo did not provide the TARGET environment variable");
+
+    let out_dir = env::var("OUT_DIR").expect("OUT_DIR not set");
+    let lib_dir = Path::new(&out_dir)
+        .join("witnesscalc")
+        .join("package")
+        .join("lib");
+
+    let witnesscalc_path = Path::new(&out_dir).join(Path::new("witnesscalc"));
+    // If the witnesscalc repo is not cloned, clone it
+    if !witnesscalc_path.exists() {
+        let witnesscalc_script_path = Path::new(&out_dir).join(Path::new("clone_witnesscalc.sh"));
+        fs::write(&witnesscalc_script_path, WITNESSCALC_BUILD_SCRIPT)
+            .expect("Failed to write build script");
+        Command::new("sh")
+            .arg(witnesscalc_script_path.to_str().unwrap())
+            .spawn()
+            .expect("Failed to spawn witnesscalc build")
+            .wait()
+            .expect("witnesscalc build errored");
+    }
+
+    // If the witnesscalc library is not built, build it
+    // TODO detect circuit source changes and rebuild
+    if !lib_dir.exists() {
+        Command::new("sh")
+            .current_dir(&witnesscalc_path)
+            .arg("./build_gmp.sh")
+            .arg("host")
+            .spawn()
+            .expect("Failed to spawn build_gmp.sh")
+            .wait()
+            .expect("build_gmp.sh errored");
+        // TODO detect target architecture and build the correct target
+        // "Switch" the target and set the build_target_architecture
+
+        //const TARGET_ARCHS: [&str; 5] = ["host", "arm64_host", "android", "android_x86_64", "ios"];
+
+        //Map the target to the correct build target
+        let build_target_architecture = match target.as_str() {
+            "aarch64-apple-ios" => "ios",
+            "aarch64-apple-ios-sim" => "ios",
+            "x86_64-apple-ios" => "ios",
+            "x86_64-linux-android" => "android_x86_64",
+            "i686-linux-android" => "android_x86_64",
+            "armv7-linux-androideabi" => "android",
+            "aarch64-linux-android" => "android",
+            "aarch64-apple-darwin" => "arm64_host",
+            _ => "host",
+        };
+
+        //find all the .cpp files in the circuits_dir
+        let circuit_files = fs::read_dir(circuits_dir)
+            .expect("Failed to read circuits directory")
+            .map(|entry| entry.unwrap().path())
+            .filter(|path| path.extension().unwrap() == "cpp")
+            .collect::<Vec<_>>();
+
+        // Copy each circuit .cpp and .dat into witnesscalc/src, replacing any existing files
+        circuit_files.iter().for_each(|path| {
+            let circuit_name = path.file_stem().unwrap().to_str().unwrap();
+            let circuit_dat = path.with_extension("dat");
+            let circuit_dat_name = circuit_dat.file_name().unwrap().to_str().unwrap();
+            let circuit_dat_dest = witnesscalc_path.join("src").join(circuit_dat_name);
+            fs::copy(&circuit_dat, &circuit_dat_dest).expect("Failed to copy circuit .dat file");
+            //For each .cpp file, do the following: find the last include statement (should be #include "calcwit.hpp") and insert the following on the next line: namespace CIRCUIT_NAME {. Then, insert the closing } at the end of the file:
+            let circuit_cpp = fs::read_to_string(&path).expect("Failed to read circuit .cpp file");
+            let circuit_cpp = circuit_cpp.replace(
+                "#include \"calcwit.hpp\"",
+                "#include \"calcwit.hpp\"\nnamespace CIRCUIT_NAME {",
+            );
+            let circuit_cpp = circuit_cpp + "\n}";
+            let circuit_cpp_name = witnesscalc_path.join("src").join(circuit_name);
+            let circuit_cpp_dest = circuit_cpp_name.with_extension("cpp");
+            fs::write(&circuit_cpp_dest, circuit_cpp).expect("Failed to write circuit .cpp file");
+
+            //Find a witnesscalc_template.cpp template file in the src. Replace all the @CIRCUIT_NAME@ inside it with the circuit name and write it to the src directory, replacing "template" in the name with the circuit name
+            let template_path = witnesscalc_path
+                .join("src")
+                .join("witnesscalc_template.cpp");
+            let template =
+                fs::read_to_string(&template_path).expect("Failed to read template file");
+            let template = template.replace("@CIRCUIT_NAME@", circuit_name);
+            let template_dest = witnesscalc_path
+                .join("src")
+                .join(format!("witnesscalc_{}.cpp", circuit_name));
+            fs::write(&template_dest, template).expect("Failed to write the templated .cpp file");
+            //Find a witnesscalc_template.h template file in the src. Replace all the @CIRCUIT_NAME@ inside it with the circuit name, @CIRCUIT_NAME_CAPS@ with the capitalized name, and write it to the src directory, replacing "template" in the name with the circuit name
+            let template_path = witnesscalc_path.join("src").join("witnesscalc_template.h");
+            let template =
+                fs::read_to_string(&template_path).expect("Failed to read template file");
+            let template = template
+                .replace("@CIRCUIT_NAME@", circuit_name)
+                .replace("@CIRCUIT_NAME_CAPS@", &circuit_name.to_uppercase());
+            let template_dest = witnesscalc_path
+                .join("src")
+                .join(format!("witnesscalc_{}.h", circuit_name));
+            fs::write(&template_dest, template).expect("Failed to write the templated .h file");
+        });
+
+        //the circuit name list would look like "circuit1;circuit2;circuit3"
+        let circuit_names = circuit_files
+            .iter()
+            .map(|path| path.file_stem().unwrap().to_str().unwrap())
+            .collect::<Vec<_>>();
+
+        let circuit_names_semicolon = circuit_names.join(";");
+
+        Command::new("make")
+            .env("CIRCUIT_NAMES", circuit_names_semicolon)
+            .arg(build_target_architecture)
+            .current_dir(&witnesscalc_path)
+            .spawn()
+            .expect("Failed to spawn make arm64_host")
+            .wait()
+            .expect("make arm64_host errored");
+
+        // Link the witnesscalc library for the circuit
+        circuit_names.iter().for_each(|circuit_name| {
+            println!("cargo:rustc-link-lib=witnesscalc_{}", circuit_name);
+        });
+    }
+
+    // Other link commands
+    println!(
+        "cargo:rustc-link-search=native={}",
+        lib_dir.to_string_lossy()
+    );
+    println!(
+        "cargo:rustc-link-arg=-Wl,-rpath,{}",
+        lib_dir.to_string_lossy()
+    );
 }
