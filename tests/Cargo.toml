@@ -1,0 +1,12 @@
+[package]
+name = "tests"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+witnesscalc_adapter = { path = "../witnesscalc_adapter", package = "witnesscalc-adapter"}
+
+[build-dependencies]
+witnesscalc_adapter = { path = "../witnesscalc_adapter", package = "witnesscalc-adapter"}
+
+[lib]

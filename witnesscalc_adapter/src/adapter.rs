@@ -1,8 +1,12 @@
 use std::{env, fs, path::Path, process::Command};
 
-const WITNESSCALC_BUILD_SCRIPT: &str = include_str!("./clone_witnesscalc.sh");
+const WITNESSCALC_BUILD_SCRIPT: &str = include_str!("../clone_witnesscalc.sh");
 
-fn main() {
+pub fn build_and_link() {
+    println!("WE ARE HERE");
+
+    let target = env::var("TARGET").expect("Cargo did not provide the TARGET environment variable");
+    println!("The target is: {}", target);
     let out_dir = env::var("OUT_DIR").expect("OUT_DIR not set");
     let lib_dir = Path::new(&out_dir)
         .join("witnesscalc")
@@ -35,8 +39,25 @@ fn main() {
             .wait()
             .expect("build_gmp.sh errored");
         // TODO detect target architecture and build the correct target
+        // "Switch" the target and set the build_target_architecture
+
+        //const TARGET_ARCHS: [&str; 5] = ["host", "arm64_host", "android", "android_x86_64", "ios"];
+
+        //Map the target to the correct build target
+        let build_target_architecture = match target.as_str() {
+            "aarch64-apple-ios" => "ios",
+            "aarch64-apple-ios-sim" => "ios",
+            "x86_64-apple-ios" => "ios",
+            "x86_64-linux-android" => "android_x86_64",
+            "i686-linux-android" => "android_x86_64",
+            "armv7-linux-androideabi" => "android",
+            "aarch64-linux-android" => "android",
+            "aarch64-apple-darwin" => "arm64_host",
+            _ => "host",
+        };
+
         Command::new("make")
-            .arg("arm64_host")
+            .arg(build_target_architecture)
             .current_dir(&witnesscalc_path)
             .spawn()
             .expect("Failed to spawn make arm64_host")

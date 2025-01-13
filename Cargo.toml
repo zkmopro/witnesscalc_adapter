@@ -1,12 +1,6 @@
-[package]
-name = "witnesscalc_adapter"
-version = "0.1.0"
-edition = "2021"
-
-[lib]
-name = "rust_witness"
-crate-type = ["lib", "cdylib", "staticlib"]
-
-[dependencies]
-libc = "0.2.169"
-
+[workspace]
+members = [
+    "witnesscalc_adapter",
+    "tests",
+]
+resolver = "2"

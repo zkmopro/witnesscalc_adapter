@@ -1,0 +1,9 @@
+[package]
+name = "witnesscalc-adapter"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+paste = "1.0.0"
+
+[lib]
