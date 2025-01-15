@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 witnesscalc_adapter = { path = "../witnesscalc_adapter", package = "witnesscalc-adapter"}
+num-bigint = "0.4.6"
 
 [build-dependencies]
 witnesscalc_adapter = { path = "../witnesscalc_adapter", package = "witnesscalc-adapter"}
