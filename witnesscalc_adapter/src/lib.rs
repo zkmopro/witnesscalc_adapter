@@ -8,7 +8,7 @@ pub mod convert_witness;
 macro_rules! witness {
     ($x: ident) => {
         $crate::paste::paste! {
-                #[link(name = "witnesscalc_" [<$x>])]
+                #[link(name = "witnesscalc_" [<$x>], kind = "static")]
                 extern "C" {
                     fn [<witnesscalc_ $x>](
                         circuit_buffer: *const std::os::raw::c_char,
@@ -107,34 +107,43 @@ pub fn build_and_link(circuits_dir: &str) {
             .expect("witnesscalc build errored");
     }
 
+    println!("Detected target: {}", target);
+    //For possible options see witnesscalc/build_gmp.sh
+    let gmp_build_target = match target.as_str() {
+        "aarch64-apple-ios" => "ios",
+        "aarch64-apple-ios-sim" => "ios_simulator",
+        "x86_64-apple-ios" => "ios_simulator",
+        "x86_64-linux-android" => "android_x86_64",
+        "i686-linux-android" => "android_x86_64",
+        "armv7-linux-androideabi" => "android",
+        "aarch64-linux-android" => "android",
+        "aarch64-apple-darwin" => "host", //Use "host" for M Macs, macos_arm64 would fail the subsequent build
+        _ => "host",
+    };
+    //For possible options see witnesscalc/Makefile
+    let witnesscalc_build_target = match target.as_str() {
+        "aarch64-apple-ios" => "ios",
+        "aarch64-apple-ios-sim" => "ios_simulator_arm64",
+        "x86_64-apple-ios" => "ios_simulator_x86_64",
+        "x86_64-linux-android" => "android_x86_64",
+        "i686-linux-android" => "android_x86_64",
+        "armv7-linux-androideabi" => "android",
+        "aarch64-linux-android" => "android",
+        "aarch64-apple-darwin" => "arm64_host",
+        _ => "host",
+    };
+
     // If the witnesscalc library is not built, build it
     // TODO detect circuit source changes and rebuild
     if !lib_dir.exists() {
         Command::new("sh")
             .current_dir(&witnesscalc_path)
             .arg("./build_gmp.sh")
-            .arg("host")
+            .arg(gmp_build_target)
             .spawn()
             .expect("Failed to spawn build_gmp.sh")
             .wait()
             .expect("build_gmp.sh errored");
-        // TODO detect target architecture and build the correct target
-        // "Switch" the target and set the build_target_architecture
-
-        //const TARGET_ARCHS: [&str; 5] = ["host", "arm64_host", "android", "android_x86_64", "ios"];
-
-        //Map the target to the correct build target
-        let build_target_architecture = match target.as_str() {
-            "aarch64-apple-ios" => "ios",
-            "aarch64-apple-ios-sim" => "ios",
-            "x86_64-apple-ios" => "ios",
-            "x86_64-linux-android" => "android_x86_64",
-            "i686-linux-android" => "android_x86_64",
-            "armv7-linux-androideabi" => "android",
-            "aarch64-linux-android" => "android",
-            "aarch64-apple-darwin" => "arm64_host",
-            _ => "host",
-        };
 
         //find all the .cpp files in the circuits_dir
         let circuit_files = fs::read_dir(circuits_dir)
@@ -195,7 +204,7 @@ pub fn build_and_link(circuits_dir: &str) {
 
         Command::new("make")
             .env("CIRCUIT_NAMES", circuit_names_semicolon)
-            .arg(build_target_architecture)
+            .arg(witnesscalc_build_target)
             .current_dir(&witnesscalc_path)
             .spawn()
             .expect("Failed to spawn make arm64_host")
@@ -204,17 +213,16 @@ pub fn build_and_link(circuits_dir: &str) {
 
         // Link the witnesscalc library for the circuit
         circuit_names.iter().for_each(|circuit_name| {
-            println!("cargo:rustc-link-lib=witnesscalc_{}", circuit_name);
+            println!("cargo:rustc-link-lib=static=witnesscalc_{}", circuit_name);
         });
     }
 
-    // Other link commands
+    // Link the gmp and fr libraries
+    println!("cargo:rustc-link-lib=static=gmp");
+    println!("cargo:rustc-link-lib=static=fr");
+    // Specify the path to the witnesscalc library for the linker
     println!(
         "cargo:rustc-link-search=native={}",
-        lib_dir.to_string_lossy()
-    );
-    println!(
-        "cargo:rustc-link-arg=-Wl,-rpath,{}",
         lib_dir.to_string_lossy()
     );
 }
