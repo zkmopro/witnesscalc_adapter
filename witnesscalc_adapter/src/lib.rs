@@ -217,6 +217,9 @@ pub fn build_and_link(circuits_dir: &str) {
         });
     }
 
+    // Link the C++ standard library. This is necessary for Rust tests to run on the host,
+    // non-host targets may require a specific way of linking (e.g., through linking flags in xcode)
+    println!("cargo:rustc-link-lib=c++");
     // Link the gmp and fr libraries
     println!("cargo:rustc-link-lib=static=gmp");
     println!("cargo:rustc-link-lib=static=fr");
