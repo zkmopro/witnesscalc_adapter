@@ -26,7 +26,7 @@ macro_rules! witness {
             pub fn [<$x _witness>]<I: IntoIterator<Item = (String, Vec<num_bigint::BigInt>)>>(inputs: I, dat_file_path: &str) -> Vec<num_bigint::BigInt> {
                 println!("Generating witness for circuit {}", stringify!($x));
                 unsafe {
-                    //TODO: refactor the C++ code in witnesscalc to not rely on JSON but take the inputs directly
+                    //TODO: refactor the C++ code in witnesscalc to not rely on JSON but take the inputs directly?
                     //Convert the inputs into a JSON string
                     let json_map: $crate::serde_json::Map<String, $crate::serde_json::Value> = inputs
                         .into_iter()
@@ -68,7 +68,7 @@ macro_rules! witness {
                         panic!("Error in witnesscalc: {}", error_msg);
                     }
 
-                    // TODO remove the conversion and return the buffer directly.
+                    // TODO remove the conversion and return the buffer directly?
                     // The conversion is only necessary for compatibility with ark_groth16 prover,
                     // while rapidsnark prover takes the byte buffer
                     let wtns_buffer = &wtns_buffer[..wtns_size as usize];
@@ -134,7 +134,7 @@ pub fn build_and_link(circuits_dir: &str) {
     };
 
     // If the witnesscalc library is not built, build it
-    // TODO detect circuit source changes and rebuild
+    // TODO detect circuit source changes and rebuild?
     if !lib_dir.exists() {
         Command::new("sh")
             .current_dir(&witnesscalc_path)
