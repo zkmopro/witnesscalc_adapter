@@ -136,7 +136,7 @@ pub fn build_and_link(circuits_dir: &str) {
     // If the witnesscalc library is not built, build it
     // TODO detect circuit source changes and rebuild?
     if !lib_dir.exists() {
-        Command::new("sh")
+        Command::new("bash")
             .current_dir(&witnesscalc_path)
             .arg("./build_gmp.sh")
             .arg(gmp_build_target)
@@ -219,7 +219,14 @@ pub fn build_and_link(circuits_dir: &str) {
 
     // Link the C++ standard library. This is necessary for Rust tests to run on the host,
     // non-host targets may require a specific way of linking (e.g., through linking flags in xcode)
-    println!("cargo:rustc-link-lib=c++");
+    #[cfg(target_os = "macos")]
+    {
+        println!("cargo:rustc-link-lib=c++"); // macOS default
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        println!("cargo:rustc-link-lib=stdc++"); // Linux or other platforms
+    }
     // Link the gmp and fr libraries
     println!("cargo:rustc-link-lib=static=gmp");
     println!("cargo:rustc-link-lib=static=fr");
