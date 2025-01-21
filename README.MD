@@ -18,4 +18,4 @@ witnesscalc_adapter::witness!(<circuit name>);
 
 # Acknowledgements
 
-Inspired by https://github.com/chancehudson/rust-witness. This adapter relies on the [0xPolygonID/witnesscalc library fork](https://github.com/alxkzmn/witnesscalc).
+Inspired by https://github.com/chancehudson/rust-witness. This adapter relies on the [0xPolygonID/witnesscalc library fork](https://github.com/zkmopro/witnesscalc).

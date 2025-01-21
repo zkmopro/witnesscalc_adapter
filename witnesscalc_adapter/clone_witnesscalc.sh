@@ -17,7 +17,6 @@ if [ -e $BINARY_PATH ]; then
 fi
 
 rm -rf $BUILD_DIR
-# TODO move repo to mopro org?
-git clone https://github.com/alxkzmn/witnesscalc.git $BUILD_DIR
+git clone https://github.com/zkmopro/witnesscalc.git $BUILD_DIR
 cd $BUILD_DIR
 git submodule update --init --recursive
