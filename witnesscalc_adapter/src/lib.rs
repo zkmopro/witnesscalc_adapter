@@ -93,17 +93,6 @@ pub fn build_and_link(circuits_dir: &str) {
         .join("package")
         .join("lib");
 
-    // Link the C++ standard library. This is necessary for Rust tests to run on the host,
-    // non-host targets may require a specific way of linking (e.g., through linking flags in xcode)
-    #[cfg(target_os = "macos")]
-    {
-        println!("cargo:rustc-link-lib=c++"); // macOS default
-    }
-    #[cfg(not(target_os = "macos"))]
-    {
-        println!("cargo:rustc-link-lib=stdc++"); // Linux or other platforms
-    }
-
     let witnesscalc_path = Path::new(&out_dir).join(Path::new("witnesscalc"));
     // If the witnesscalc repo is not cloned, clone it
     if !witnesscalc_path.exists() {
@@ -230,7 +219,14 @@ pub fn build_and_link(circuits_dir: &str) {
 
     // Link the C++ standard library. This is necessary for Rust tests to run on the host,
     // non-host targets may require a specific way of linking (e.g., through linking flags in xcode)
-    println!("cargo:rustc-link-lib=c++");
+    #[cfg(target_os = "macos")]
+    {
+        println!("cargo:rustc-link-lib=c++"); // macOS default
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        println!("cargo:rustc-link-lib=stdc++"); // Linux or other platforms
+    }
     // Link the gmp and fr libraries
     println!("cargo:rustc-link-lib=static=gmp");
     println!("cargo:rustc-link-lib=static=fr");
