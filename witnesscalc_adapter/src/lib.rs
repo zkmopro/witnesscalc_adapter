@@ -1,6 +1,10 @@
 pub use paste;
 pub use serde_json;
-use std::{env, fs, path::Path, process::Command};
+use std::{
+    env, fs,
+    path::{Path, PathBuf},
+    process::Command,
+};
 
 pub mod convert_witness;
 
@@ -86,6 +90,12 @@ const WITNESSCALC_BUILD_SCRIPT: &str = include_str!("../clone_witnesscalc.sh");
 
 pub fn build_and_link(circuits_dir: &str) {
     let target = env::var("TARGET").expect("Cargo did not provide the TARGET environment variable");
+    if target.contains("android") {
+        let android_ndk = env::var("ANDROID_NDK").expect("ANDROID_NDK not set");
+        if android_ndk.is_empty() {
+            panic!("ANDROID_NDK must be non-empty");
+        }
+    }
 
     let out_dir = env::var("OUT_DIR").expect("OUT_DIR not set");
     let lib_dir = Path::new(&out_dir)
@@ -125,6 +135,17 @@ pub fn build_and_link(circuits_dir: &str) {
         "aarch64-apple-darwin" => "host", //Use "host" for M Macs, macos_arm64 would fail the subsequent build
         _ => "host",
     };
+
+    let gmp_lib_folder = match target.as_str() {
+        "aarch64-apple-ios" => "package_ios_arm64",
+        "aarch64-apple-ios-sim" => "package_iphone_simulator_arm64",
+        "x86_64-apple-ios" => "package_iphone_simulator_x86_64",
+        "x86_64-linux-android" => "package_android_x86_64",
+        "i686-linux-android" => "package_android_x86_64",
+        "armv7-linux-androideabi" => "package_android_arm64",
+        "aarch64-linux-android" => "package_android_arm64",
+        _ => "package",
+    };
     //For possible options see witnesscalc/Makefile
     let witnesscalc_build_target = match target.as_str() {
         "aarch64-apple-ios" => "ios",
@@ -140,7 +161,8 @@ pub fn build_and_link(circuits_dir: &str) {
 
     // If the witnesscalc library is not built, build it
     let gmp_dir = witnesscalc_path.join("depends").join("gmp");
-    if !gmp_dir.exists() {
+    let target_dir = gmp_dir.join(gmp_lib_folder);
+    if !target_dir.exists() {
         Command::new("bash")
             .current_dir(&witnesscalc_path)
             .arg("./build_gmp.sh")
@@ -238,4 +260,25 @@ pub fn build_and_link(circuits_dir: &str) {
         "cargo:rustc-link-search=native={}",
         lib_dir.to_string_lossy()
     );
+    // refer to https://github.com/bbqsrc/cargo-ndk to see how to link the libc++_shared.so file in Android
+    if env::var("CARGO_CFG_TARGET_OS").unwrap() == "android" {
+        android();
+    }
+}
+
+fn android() {
+    println!("cargo:rustc-link-lib=c++_shared");
+
+    if let Ok(output_path) = env::var("CARGO_NDK_OUTPUT_PATH") {
+        let sysroot_libs_path = PathBuf::from(env::var_os("CARGO_NDK_SYSROOT_LIBS_PATH").unwrap());
+        let lib_path = sysroot_libs_path.join("libc++_shared.so");
+        assert!(
+            lib_path.exists(),
+            "Error: Source file {:?} does not exist",
+            lib_path
+        );
+        let dest_dir = Path::new(&output_path).join(&env::var("CARGO_NDK_ANDROID_TARGET").unwrap());
+        fs::create_dir_all(&dest_dir).expect("Failed to create output directory");
+        fs::copy(lib_path, Path::new(&dest_dir).join("libc++_shared.so")).unwrap();
+    }
 }
