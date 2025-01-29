@@ -8,6 +8,7 @@ pub mod convert_witness;
 macro_rules! witness {
     ($x: ident) => {
         $crate::paste::paste! {
+            const [<$x _CIRCUIT_DATA>]: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/witnesscalc/src/", stringify!($x), ".dat"));
                 #[link(name = "witnesscalc_" [<$x>], kind = "static")]
                 extern "C" {
                     fn [<witnesscalc_ $x>](
@@ -23,7 +24,7 @@ macro_rules! witness {
                 }
             }
         $crate::paste::item! {
-            pub fn [<$x _witness>]<I: IntoIterator<Item = (String, Vec<num_bigint::BigInt>)>>(inputs: I, dat_file_path: &str) -> Vec<num_bigint::BigInt> {
+            pub fn [<$x _witness>]<I: IntoIterator<Item = (String, Vec<num_bigint::BigInt>)>>(inputs: I) -> Vec<num_bigint::BigInt> {
                 println!("Generating witness for circuit {}", stringify!($x));
                 unsafe {
                     //TODO: refactor the C++ code in witnesscalc to not rely on JSON but take the inputs directly?
@@ -40,9 +41,9 @@ macro_rules! witness {
                     let json_input = std::ffi::CString::new($crate::serde_json::to_string(&json).expect("Failed to serialize JSON")).unwrap();
                     let json_size = json_input.as_bytes().len() as std::ffi::c_ulong;
 
-                    let circuit_data = std::fs::read(dat_file_path).unwrap();
-                    let circuit_buffer = circuit_data.as_ptr() as *const std::ffi::c_char;
-                    let circuit_size = circuit_data.len() as std::ffi::c_ulong;
+                    let circuit_buffer = [<$x _CIRCUIT_DATA>].as_ptr() as *const std::ffi::c_char;
+                    let circuit_size = [<$x _CIRCUIT_DATA>].len() as std::ffi::c_ulong;
+
 
                     //TODO dynamically allocate the buffer?
                     let mut wtns_buffer = vec![0u8; 100 * 1024 * 1024]; // 8 MB buffer

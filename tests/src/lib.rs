@@ -5,22 +5,16 @@ witnesscalc_adapter::witness!(multiplier2);
 witnesscalc_adapter::witness!(keccak256_256_test);
 witnesscalc_adapter::witness!(rsa_main);
 
-pub fn create_witness(inputs: HashMap<String, Vec<BigInt>>, dat_file_path: &str) -> Vec<BigInt> {
-    multiplier2_witness(inputs, dat_file_path)
+pub fn create_witness(inputs: HashMap<String, Vec<BigInt>>) -> Vec<BigInt> {
+    multiplier2_witness(inputs)
 }
 
-pub fn create_keccak256_256_test_witness(
-    inputs: HashMap<String, Vec<BigInt>>,
-    dat_file_path: &str,
-) -> Vec<BigInt> {
-    keccak256_256_test_witness(inputs, dat_file_path)
+pub fn create_keccak256_256_test_witness(inputs: HashMap<String, Vec<BigInt>>) -> Vec<BigInt> {
+    keccak256_256_test_witness(inputs)
 }
 
-pub fn create_rsa_main_witness(
-    inputs: HashMap<String, Vec<BigInt>>,
-    dat_file_path: &str,
-) -> Vec<BigInt> {
-    rsa_main_witness(inputs, dat_file_path)
+pub fn create_rsa_main_witness(inputs: HashMap<String, Vec<BigInt>>) -> Vec<BigInt> {
+    rsa_main_witness(inputs)
 }
 
 #[cfg(test)]
@@ -44,7 +38,7 @@ mod test {
         inputs.insert("a".to_string(), vec![a]);
         inputs.insert("b".to_string(), vec![b]);
 
-        let result = create_witness(inputs, "./testdata/multiplier2.dat");
+        let result = create_witness(inputs);
 
         assert_eq!(result.len(), 4);
         assert_eq!(result[0], BigInt::from(1u8));
@@ -66,7 +60,7 @@ mod test {
 
         use std::time::Instant;
         let start = Instant::now();
-        let _ = create_keccak256_256_test_witness(inputs, "./testdata/keccak256_256_test.dat");
+        let _ = create_keccak256_256_test_witness(inputs);
         let end = Instant::now();
         println!(
             "Time taken for keccak256_256_test: {:?}",
@@ -205,7 +199,7 @@ mod test {
 
         use std::time::Instant;
         let start = Instant::now();
-        let _ = create_rsa_main_witness(inputs_bigint, "./testdata/rsa_main.dat");
+        let _ = create_rsa_main_witness(inputs_bigint);
         let end = Instant::now();
         println!("Time taken for rsa_main: {:?}", end.duration_since(start));
     }
