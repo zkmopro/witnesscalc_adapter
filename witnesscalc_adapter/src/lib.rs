@@ -8,6 +8,7 @@ pub mod convert_witness;
 macro_rules! witness {
     ($x: ident) => {
         $crate::paste::paste! {
+            #[allow(non_upper_case_globals)]
             const [<$x _CIRCUIT_DATA>]: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/witnesscalc/src/", stringify!($x), ".dat"));
                 #[link(name = "witnesscalc_" [<$x>], kind = "static")]
                 extern "C" {
