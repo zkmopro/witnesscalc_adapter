@@ -278,7 +278,10 @@ fn android() {
             lib_path
         );
         let dest_dir = Path::new(&output_path).join(&env::var("CARGO_NDK_ANDROID_TARGET").unwrap());
-        fs::create_dir_all(&dest_dir).expect("Failed to create output directory");
+        println!("cargo:rerun-if-changed={}", dest_dir.display());
+        if !dest_dir.exists() {
+            fs::create_dir_all(&dest_dir).unwrap();
+        }
         fs::copy(lib_path, Path::new(&dest_dir).join("libc++_shared.so")).unwrap();
     }
 }
