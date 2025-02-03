@@ -6,8 +6,8 @@ use std::{
     process::Command,
 };
 
-pub mod convert_witness;
-pub use convert_witness::parse_witness_to_bigints;
+pub mod convert_type;
+pub use convert_type::*;
 
 #[macro_export]
 macro_rules! witness {
