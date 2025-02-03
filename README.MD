@@ -16,6 +16,29 @@ In your main code, use the `witness` macro to generate a witness for a given inp
 witnesscalc_adapter::witness!(<circuit name>);
 ```
 
+## Supported platforms
+
+### Linux
+
+-   x86_64 linux
+-   arm64 linux
+
+### MacOS
+
+-   aarch64-apple-darwin
+-   x86_64-apple-darwin
+
+### iOS
+
+-   aarch64-apple-ios
+-   aarch64-apple-ios-sim
+-   x86_64-apple-ios
+
+### Android
+
+-   aarch64-linux-android
+-   x86_64-linux-android
+
 # Acknowledgements
 
 Inspired by https://github.com/chancehudson/rust-witness. This adapter relies on the [0xPolygonID/witnesscalc library fork](https://github.com/zkmopro/witnesscalc).
