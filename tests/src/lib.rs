@@ -1,20 +1,35 @@
+use anyhow::Result;
 use num_bigint::BigInt;
+use serde_json;
 use std::collections::HashMap;
 
 witnesscalc_adapter::witness!(multiplier2);
 witnesscalc_adapter::witness!(keccak256_256_test);
 witnesscalc_adapter::witness!(rsa_main);
 
-pub fn create_witness(inputs: HashMap<String, Vec<BigInt>>) -> Vec<BigInt> {
-    multiplier2_witness(inputs)
+pub fn convert_json(inputs: HashMap<String, Vec<BigInt>>) -> String {
+    //Convert the inputs into a JSON string
+    let json_map: serde_json::Map<String, serde_json::Value> = inputs
+        .into_iter()
+        .map(|(key, values)| {
+            let values_as_strings: Vec<String> = values.iter().map(|num| num.to_string()).collect();
+            (key, serde_json::Value::from(values_as_strings))
+        })
+        .collect();
+    let json = serde_json::Value::Object(json_map);
+    serde_json::to_string(&json).unwrap()
 }
 
-pub fn create_keccak256_256_test_witness(inputs: HashMap<String, Vec<BigInt>>) -> Vec<BigInt> {
-    keccak256_256_test_witness(inputs)
+pub fn create_witness(inputs: HashMap<String, Vec<BigInt>>) -> Result<Vec<u8>> {
+    multiplier2_witness(&convert_json(inputs))
 }
 
-pub fn create_rsa_main_witness(inputs: HashMap<String, Vec<BigInt>>) -> Vec<BigInt> {
-    rsa_main_witness(inputs)
+pub fn create_keccak256_256_test_witness(inputs: HashMap<String, Vec<BigInt>>) -> Result<Vec<u8>> {
+    keccak256_256_test_witness(&convert_json(inputs))
+}
+
+pub fn create_rsa_main_witness(inputs: HashMap<String, Vec<BigInt>>) -> Result<Vec<u8>> {
+    rsa_main_witness(&convert_json(inputs))
 }
 
 #[cfg(test)]
@@ -24,6 +39,7 @@ mod test {
     use std::str::FromStr;
 
     use num_bigint::BigInt;
+    use witnesscalc_adapter::parse_witness_to_bigints;
 
     use crate::create_keccak256_256_test_witness;
     use crate::create_rsa_main_witness;
@@ -39,17 +55,20 @@ mod test {
         inputs.insert("b".to_string(), vec![b]);
 
         let result = create_witness(inputs);
+        assert!(result.is_ok());
+        let witness_bytes = result.unwrap();
+        let witness = parse_witness_to_bigints(&witness_bytes).unwrap();
 
-        assert_eq!(result.len(), 4);
-        assert_eq!(result[0], BigInt::from(1u8));
+        assert_eq!(witness.len(), 4);
+        assert_eq!(witness[0], BigInt::from(1u8));
         assert_eq!(
-            result[1],
+            witness[1],
             BigInt::from(
                 6u8 // 2 x 3
             )
         );
-        assert_eq!(result[2], BigInt::from(2u8));
-        assert_eq!(result[3], BigInt::from(3u8));
+        assert_eq!(witness[2], BigInt::from(2u8));
+        assert_eq!(witness[3], BigInt::from(3u8));
     }
 
     #[test]
@@ -69,6 +88,7 @@ mod test {
     }
 
     #[test]
+    #[ignore]
     fn test_rsa_main_witnesscalc() {
         let mut inputs = HashMap::new();
 

@@ -8,5 +8,6 @@ num-bigint = "0.4.6"
 num-traits = "0.2.19"
 paste = "1.0.0"
 serde_json = "1.0.135"
+anyhow = "1.0.95"
 
 [lib]
