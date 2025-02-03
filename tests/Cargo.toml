@@ -4,10 +4,12 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-witnesscalc_adapter = { path = "../witnesscalc_adapter", package = "witnesscalc-adapter"}
+witnesscalc_adapter = { path = "../witnesscalc_adapter", package = "witnesscalc-adapter" }
 num-bigint = "0.4.6"
+serde_json = "1.0.135"
+anyhow = "1.0.95"
 
 [build-dependencies]
-witnesscalc_adapter = { path = "../witnesscalc_adapter", package = "witnesscalc-adapter"}
+witnesscalc_adapter = { path = "../witnesscalc_adapter", package = "witnesscalc-adapter" }
 
 [lib]

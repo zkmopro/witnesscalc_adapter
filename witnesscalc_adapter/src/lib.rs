@@ -6,7 +6,8 @@ use std::{
     process::Command,
 };
 
-pub mod convert_witness;
+pub mod convert_type;
+pub use convert_type::*;
 
 #[macro_export]
 macro_rules! witness {
@@ -14,48 +15,36 @@ macro_rules! witness {
         $crate::paste::paste! {
             #[allow(non_upper_case_globals)]
             const [<$x _CIRCUIT_DATA>]: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/witnesscalc/src/", stringify!($x), ".dat"));
-                #[link(name = "witnesscalc_" [<$x>], kind = "static")]
-                extern "C" {
-                    fn [<witnesscalc_ $x>](
-                        circuit_buffer: *const std::os::raw::c_char,
-                        circuit_size: std::ffi::c_ulong,
-                        json_buffer: *const std::os::raw::c_char,
-                        json_size: std::ffi::c_ulong,
-                        wtns_buffer: *mut std::os::raw::c_char,
-                        wtns_size: *mut std::ffi::c_ulong,
-                        error_msg: *mut std::os::raw::c_char,
-                        error_msg_maxsize: std::ffi::c_ulong,
-                    ) -> std::ffi::c_int;
-                }
+            #[link(name = "witnesscalc_" [<$x>], kind = "static")]
+            extern "C" {
+                fn [<witnesscalc_ $x>](
+                    circuit_buffer: *const std::os::raw::c_char,
+                    circuit_size: std::ffi::c_ulong,
+                    json_buffer: *const std::os::raw::c_char,
+                    json_size: std::ffi::c_ulong,
+                    wtns_buffer: *mut std::os::raw::c_char,
+                    wtns_size: *mut std::ffi::c_ulong,
+                    error_msg: *mut std::os::raw::c_char,
+                    error_msg_maxsize: std::ffi::c_ulong,
+                ) -> std::ffi::c_int;
             }
+        }
         $crate::paste::item! {
-            pub fn [<$x _witness>]<I: IntoIterator<Item = (String, Vec<num_bigint::BigInt>)>>(inputs: I) -> Vec<num_bigint::BigInt> {
+            pub fn [<$x _witness>](json_input: &str) -> Result<Vec<u8>> {
                 println!("Generating witness for circuit {}", stringify!($x));
                 unsafe {
-                    //TODO: refactor the C++ code in witnesscalc to not rely on JSON but take the inputs directly?
-                    //Convert the inputs into a JSON string
-                    let json_map: $crate::serde_json::Map<String, $crate::serde_json::Value> = inputs
-                        .into_iter()
-                        .map(|(key, values)| {
-                            let values_as_strings: Vec<String> = values.iter().map(|num| num.to_string()).collect();
-                            (key, $crate::serde_json::Value::from(values_as_strings))
-                        })
-                        .collect();
-                    let json = $crate::serde_json::Value::Object(json_map);
-
-                    let json_input = std::ffi::CString::new($crate::serde_json::to_string(&json).expect("Failed to serialize JSON")).unwrap();
+                    let json_input = std::ffi::CString::new(json_input).map_err(|e| anyhow::anyhow!("Failed to convert JSON input to CString: {}", e))?;
                     let json_size = json_input.as_bytes().len() as std::ffi::c_ulong;
 
                     let circuit_buffer = [<$x _CIRCUIT_DATA>].as_ptr() as *const std::ffi::c_char;
                     let circuit_size = [<$x _CIRCUIT_DATA>].len() as std::ffi::c_ulong;
 
-
                     //TODO dynamically allocate the buffer?
                     let mut wtns_buffer = vec![0u8; 100 * 1024 * 1024]; // 8 MB buffer
                     let mut wtns_size: std::ffi::c_ulong = wtns_buffer.len() as std::ffi::c_ulong;
 
-                    let mut error_msg = vec![0u8; 256];
-                    let error_msg_maxsize = error_msg.len() as std::ffi::c_ulong;
+                    let mut error_msg = vec![0u8; 256]; // Error message buffer
+                    let error_msg_ptr = error_msg.as_mut_ptr() as *mut std::ffi::c_char;
 
                     let result =  [<witnesscalc_ $x>](
                         circuit_buffer,
@@ -65,23 +54,18 @@ macro_rules! witness {
                         wtns_buffer.as_mut_ptr() as *mut _,
                         &mut wtns_size as *mut _,
                         error_msg.as_mut_ptr() as *mut _,
-                        error_msg_maxsize,
+                        error_msg.len() as u64,
                     );
 
                     if result != 0 {
-                        let error_msg = std::ffi::CString::from_vec_unchecked(error_msg);
-                        let error_msg = error_msg.to_str().unwrap();
-                        panic!("Error in witnesscalc: {}", error_msg);
+                        let error_string = std::ffi::CStr::from_ptr(error_msg_ptr)
+                            .to_string_lossy()
+                            .into_owned();
+                        return Err(anyhow::anyhow!("Proof generation failed: {}", error_string));
                     }
 
-                    // TODO remove the conversion and return the buffer directly?
-                    // The conversion is only necessary for compatibility with ark_groth16 prover,
-                    // while rapidsnark prover takes the byte buffer
                     let wtns_buffer = &wtns_buffer[..wtns_size as usize];
-                    println!("Witness buffer size: {}", wtns_size);
-                    // count all nonzero bytes in the buffer
-                    let nonzero_bytes = wtns_buffer.iter().filter(|&x| *x != 0).count();
-                    $crate::convert_witness::parse_witness_to_bigints(wtns_buffer).unwrap()
+                    Ok(wtns_buffer.to_vec())
                 }
             }
         }
