@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 description = "Library to run witnesscalc in rust"
 license = "MIT OR Apache-2.0"
-repository = "https://github.com/zkmopro/witnesscalc-adapter"
+repository = "https://github.com/zkmopro/witnesscalc_adapter"
 documentation = "https://zkmopro.org/"
 homepage = "https://zkmopro.org/"
 
