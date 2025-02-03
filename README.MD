@@ -8,12 +8,29 @@ In `build.rs`, add the following code to compile the witness generator C++ sourc
 
 ```rust
 witnesscalc_adapter::build_and_link("../path to directory containing your C++ sources");
+// e.g. witnesscalc_adapter::build_and_link("../testdata");
 ```
 
 In your main code, use the `witness` macro to generate a witness for a given input:
 
 ```rust
 witnesscalc_adapter::witness!(<circuit name>);
+// e.g. witnesscalc_adapter::witness!(multiplier2);
+```
+
+Calculate the witness by using the `witnesscalc_<circuit name>` function.
+
+```rust
+let wtns = <circuit name>_witness(inputs_json_string)
+// e.g. let wtns = multiplier2_witness("{\"a\": [\"2\"], \"b\": [\"3\"]}")
+```
+
+It will generate a `wtns` bytes array like the output of [witnesscalc](https://github.com/0xPolygonID/witnesscalc).
+
+Convert the `wtns` to bigints by using the `parse_witness_to_bigints` function.
+
+```rust
+let witness = parse_witness_to_bigints(&wtns).unwrap();
 ```
 
 ## Supported platforms
