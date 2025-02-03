@@ -1,8 +1,20 @@
 # Witnesscalc Adapter
 
+[![Crates.io](https://img.shields.io/crates/v/witnesscalc-adapter?label=witnesscalc-adapter)](https://crates.io/crates/witnesscalc-adapter)
+
 This project provides a Rust adapter for compiling and linking [Circom circuit witness generator C++ sources](https://docs.circom.io/getting-started/computing-the-witness/#computing-the-witness-with-c) into a native library for target platforms (e.g., mobile devices). It includes macros and functions to facilitate the integration of witness generation into Rust codebases.
 
 ## Usage
+
+Include the crate in your `Cargo.toml`:
+
+```toml
+[dependencies]
+witnesscalc-adapter = "0.1.0"
+
+[build-dependencies]
+witnesscalc-adapter = "0.1.0"
+```
 
 In `build.rs`, add the following code to compile the witness generator C++ sources into a native library and link to it:
 
