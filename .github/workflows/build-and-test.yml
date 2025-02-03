@@ -38,7 +38,7 @@ jobs:
                   toolchain: "1.81.0"
                   targets: ${{ matrix.target }}
             - name: Build
-              run: cargo build --target ${{ matrix.target }}
+              run: cd tests && cargo build --target ${{ matrix.target }}
     build-android:
         runs-on: ubuntu-latest
         if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.event.pull_request.base.repo.full_name
@@ -58,7 +58,7 @@ jobs:
             - name: Install Android NDK
               run: cargo install cargo-ndk
             - name: Build
-              run: cargo ndk -t ${{ matrix.target }} build
+              run: cd tests && cargo ndk -t ${{ matrix.target }} build
     test-linux:
         runs-on: ubuntu-latest
         if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.event.pull_request.base.repo.full_name
@@ -67,7 +67,7 @@ jobs:
             - name: Install Rust toolchain
               uses: actions-rs/toolchain@v1
               with:
-                  toolchain: "1.81.0"
+                  toolchain: "1.78.0"
                   override: true
             - name: Run tests
               run: cd tests && cargo test
@@ -82,7 +82,7 @@ jobs:
                   toolchain: "1.81.0"
                   override: true
             - name: Run tests
-              run: cargo test
+              run: cd tests && cargo test
     test-macOS-x86_64:
         runs-on: macos-13
         if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.event.pull_request.base.repo.full_name
@@ -94,4 +94,4 @@ jobs:
                   toolchain: "1.81.0"
                   override: true
             - name: Run tests
-              run: cargo test
+              run: cd tests && cargo test
