@@ -9,6 +9,7 @@ use std::{
 pub mod convert_type;
 pub use convert_type::*;
 
+/// Macro to generate a witness for a given circuit
 #[macro_export]
 macro_rules! witness {
     ($x: ident) => {
