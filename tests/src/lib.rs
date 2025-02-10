@@ -39,7 +39,8 @@ mod test {
         inputs.insert("a".to_string(), vec![a]);
         inputs.insert("b".to_string(), vec![b]);
 
-        let result = create_witness(inputs);
+        let black_box_inputs = std::hint::black_box(inputs);
+        let result = create_witness(black_box_inputs);
         assert!(result.is_ok());
         let witness_bytes = result.unwrap();
         let witness = parse_witness_to_bigints(&witness_bytes).unwrap();
@@ -54,12 +55,12 @@ mod test {
     #[test]
     fn test_keccak256_256_test_witnesscalc() {
         let mut inputs = HashMap::new();
-
         inputs.insert("in".to_string(), vec![0u8.to_string(); 256]);
 
+        let black_box_inputs = std::hint::black_box(inputs);
         use std::time::Instant;
         let start = Instant::now();
-        let _ = create_keccak256_256_test_witness(inputs);
+        let _ = create_keccak256_256_test_witness(black_box_inputs);
         let end = Instant::now();
         println!(
             "Time taken for keccak256_256_test: {:?}",
