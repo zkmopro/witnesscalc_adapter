@@ -93,7 +93,7 @@ pub fn build_and_link(circuits_dir: &str) {
     if !Path::is_dir(Path::new(circuits_dir)) {
         panic!("circuits_dir must be a directory");
     }
-    println!("cargo:rerun-if-changed={}", circuits_dir.to_string());
+    println!("cargo:rerun-if-changed={}", circuits_dir);
 
     let witnesscalc_path = Path::new(&out_dir).join(Path::new("witnesscalc"));
     // If the witnesscalc repo is not cloned, clone it
@@ -175,7 +175,7 @@ pub fn build_and_link(circuits_dir: &str) {
         let circuit_dat_dest = witnesscalc_path.join("src").join(circuit_dat_name);
         fs::copy(&circuit_dat, &circuit_dat_dest).expect("Failed to copy circuit .dat file");
         //For each .cpp file, do the following: find the last include statement (should be #include "calcwit.hpp") and insert the following on the next line: namespace CIRCUIT_NAME {. Then, insert the closing } at the end of the file:
-        let circuit_cpp = fs::read_to_string(&path).expect("Failed to read circuit .cpp file");
+        let circuit_cpp = fs::read_to_string(path).expect("Failed to read circuit .cpp file");
         let circuit_cpp = circuit_cpp.replace(
             "#include \"calcwit.hpp\"",
             "#include \"calcwit.hpp\"\nnamespace CIRCUIT_NAME {",
@@ -264,7 +264,7 @@ fn android() {
             "Error: Source file {:?} does not exist",
             lib_path
         );
-        let dest_dir = Path::new(&output_path).join(&env::var("CARGO_NDK_ANDROID_TARGET").unwrap());
+        let dest_dir = Path::new(&output_path).join(env::var("CARGO_NDK_ANDROID_TARGET").unwrap());
         println!("cargo:rerun-if-changed={}", dest_dir.display());
         if !dest_dir.exists() {
             fs::create_dir_all(&dest_dir).unwrap();
