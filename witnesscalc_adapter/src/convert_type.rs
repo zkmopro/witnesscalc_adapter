@@ -4,8 +4,8 @@ use num_bigint::BigInt;
 use num_traits::FromBytes;
 
 pub fn parse_witness_to<T>(
-  buffer: &[u8],
-  from_le_bytes: impl Fn(&[u8]) -> T,
+    buffer: &[u8],
+    from_le_bytes: impl Fn(&[u8]) -> T,
 ) -> io::Result<Vec<T>> {
     /// Prints to the standard ouput only in debug build.
     macro_rules! debug_println {
@@ -15,13 +15,13 @@ pub fn parse_witness_to<T>(
     let mut pos = 0;
 
     // skip format bytes (4 bytes)
-    // ensure that this says "wtns" in ASCII  
-    if &buffer[pos..pos + 4] != b"wtns" {  
-      return Err(io::Error::new(  
-          io::ErrorKind::InvalidData,  
-          "Invalid witness file format.",  
-      ));  
-    }  
+    // ensure that this says "wtns" in ASCII
+    if &buffer[pos..pos + 4] != b"wtns" {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            "Invalid witness file format.",
+        ));
+    }
     pos += 4;
 
     // read version (4 bytes)
@@ -67,7 +67,7 @@ pub fn parse_witness_to<T>(
 
                 let _n_witness_values =
                     u32::from_le_bytes(buffer[pos..pos + 4].try_into().unwrap());
-                    debug_println!("n_witness_values: {}", _n_witness_values);
+                debug_println!("n_witness_values: {}", _n_witness_values);
                 pos += 4;
             }
 
@@ -84,7 +84,7 @@ pub fn parse_witness_to<T>(
             }
             // skip any other section
             _ => {
-                pos = pos + section_length as usize;
+                pos += section_length as usize;
             }
         }
     }
