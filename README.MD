@@ -10,10 +10,10 @@ Include the crate in your `Cargo.toml`:
 
 ```toml
 [dependencies]
-witnesscalc-adapter = "0.1.0"
+witnesscalc-adapter = "0.1"
 
 [build-dependencies]
-witnesscalc-adapter = "0.1.0"
+witnesscalc-adapter = "0.1"
 ```
 
 In `build.rs`, add the following code to compile the witness generator C++ sources (`<circuit name>.cpp` and `<circuit name>.dat`) into a native library and link to it:
