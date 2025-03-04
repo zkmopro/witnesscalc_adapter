@@ -247,6 +247,16 @@ pub fn build_and_link(circuits_dir: &str) {
         "cargo:rustc-link-search=native={}",
         lib_dir.to_string_lossy()
     );
+    if !(env::var("CARGO_CFG_TARGET_OS").unwrap().contains("ios")
+        || env::var("CARGO_CFG_TARGET_OS").unwrap().contains("android"))
+    {
+        circuit_names.iter().for_each(|circuit_name| {
+            println!("cargo:rustc-link-lib=dylib=witnesscalc_{}", circuit_name);
+        });
+        println!("cargo:rustc-link-lib=dylib=fr");
+        println!("cargo:rustc-link-lib=dylib=gmp");
+    }
+
     // refer to https://github.com/bbqsrc/cargo-ndk to see how to link the libc++_shared.so file in Android
     if env::var("CARGO_CFG_TARGET_OS").unwrap() == "android" {
         android();
