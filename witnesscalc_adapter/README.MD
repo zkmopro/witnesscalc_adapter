@@ -7,6 +7,28 @@ This project provides a Rust adapter for compiling and linking [Circom circuit w
 > [!WARNING]  
 > It does not support Circom versions 2.2.0 and above.
 
+## Requirements
+
+### Dependencies
+
+-   Linux:
+
+```sh
+sudo apt install build-essential cmake m4 nasm libstdc++6
+```
+
+-   MacOS:
+
+```sh
+brew install nasm
+```
+
+### Rust toolchain
+
+```
+cargo 1.81.0 (2dbb1af80 2024-08-20)
+```
+
 ## Usage
 
 Include the crate in your `Cargo.toml`:
