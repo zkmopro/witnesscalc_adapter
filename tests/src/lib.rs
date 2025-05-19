@@ -1,34 +1,15 @@
-use anyhow::Result;
-use std::collections::HashMap;
-use witnesscalc_adapter::*;
-
-witnesscalc_adapter::witness!(multiplier2);
-witnesscalc_adapter::witness!(keccak256_256_test);
-witnesscalc_adapter::witness!(rsa_main);
-
-pub fn create_witness(inputs: HashMap<String, Vec<String>>) -> Result<Vec<u8>> {
-    multiplier2_witness(&convert_inputs_to_json(inputs))
-}
-
-pub fn create_keccak256_256_test_witness(inputs: HashMap<String, Vec<String>>) -> Result<Vec<u8>> {
-    keccak256_256_test_witness(&convert_inputs_to_json(inputs))
-}
-
-pub fn create_rsa_main_witness(json_input: String) -> Result<Vec<u8>> {
-    rsa_main_witness(&json_input)
-}
-
 #[cfg(test)]
 mod test {
 
     use std::collections::HashMap;
 
     use num_bigint::BigInt;
-    use witnesscalc_adapter::parse_witness_to_bigints;
+    use witnesscalc_adapter::{convert_inputs_to_json, parse_witness_to_bigints};
 
-    use crate::create_keccak256_256_test_witness;
-    use crate::create_rsa_main_witness;
-    use crate::create_witness;
+    witnesscalc_adapter::witness!(multiplier2);
+    witnesscalc_adapter::witness!(keccak256_256_test);
+    witnesscalc_adapter::witness!(rsa_main);
+
     #[test]
     fn test_witnesscalc() {
         let mut inputs = HashMap::new();
@@ -40,7 +21,7 @@ mod test {
         inputs.insert("b".to_string(), vec![b]);
 
         let black_box_inputs = std::hint::black_box(inputs);
-        let result = create_witness(black_box_inputs);
+        let result = multiplier2_witness(&convert_inputs_to_json(black_box_inputs));
         assert!(result.is_ok());
         let witness_bytes = result.unwrap();
         let witness = parse_witness_to_bigints(&witness_bytes).unwrap();
@@ -60,7 +41,7 @@ mod test {
         let black_box_inputs = std::hint::black_box(inputs);
         use std::time::Instant;
         let start = Instant::now();
-        let _ = create_keccak256_256_test_witness(black_box_inputs);
+        let _ = keccak256_256_test_witness(&convert_inputs_to_json(black_box_inputs));
         let end = Instant::now();
         println!(
             "Time taken for keccak256_256_test: {:?}",
@@ -69,14 +50,13 @@ mod test {
     }
 
     #[test]
-    #[ignore = "Not stable"]
     fn test_rsa_main_witnesscalc() {
         let json_input =
             std::fs::read_to_string("testdata/rsa_main.json").expect("Unable to read file");
 
         use std::time::Instant;
         let start = Instant::now();
-        let _ = create_rsa_main_witness(json_input);
+        let _ = rsa_main_witness(&json_input);
         let end = Instant::now();
         println!("Time taken for rsa_main: {:?}", end.duration_since(start));
     }
