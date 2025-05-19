@@ -9,6 +9,11 @@ use std::{
 pub mod convert_type;
 pub use convert_type::*;
 
+#[doc(hidden)]
+pub mod __macro_deps {
+    pub use anyhow;
+}
+
 /// Macro to generate a witness for a given circuit
 #[macro_export]
 macro_rules! witness {
@@ -31,10 +36,10 @@ macro_rules! witness {
             }
         }
         $crate::paste::item! {
-            pub fn [<$x _witness>](json_input: &str) -> Result<Vec<u8>> {
+            pub fn [<$x _witness>](json_input: &str) -> $crate::__macro_deps::anyhow::Result<Vec<u8>> {
                 println!("Generating witness for circuit {}", stringify!($x));
                 unsafe {
-                    let json_input = std::ffi::CString::new(json_input).map_err(|e| anyhow::anyhow!("Failed to convert JSON input to CString: {}", e))?;
+                    let json_input = std::ffi::CString::new(json_input).map_err(|e| $crate::__macro_deps::anyhow::anyhow!("Failed to convert JSON input to CString: {}", e))?;
                     let json_size = json_input.as_bytes().len() as std::ffi::c_ulong;
 
                     let circuit_buffer = [<$x _CIRCUIT_DATA>].as_ptr() as *const std::ffi::c_char;
@@ -62,7 +67,7 @@ macro_rules! witness {
                         let error_string = std::ffi::CStr::from_ptr(error_msg_ptr)
                             .to_string_lossy()
                             .into_owned();
-                        return Err(anyhow::anyhow!("Proof generation failed: {}", error_string));
+                        return Err($crate::__macro_deps::anyhow::anyhow!("Proof generation failed: {}", error_string));
                     }
 
                     let wtns_buffer = &wtns_buffer[..wtns_size as usize];

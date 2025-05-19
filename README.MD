@@ -36,7 +36,6 @@ Include the crate in your `Cargo.toml`:
 ```toml
 [dependencies]
 witnesscalc-adapter = "0.1"
-anyhow = "1.0"
 
 [build-dependencies]
 witnesscalc-adapter = "0.1"

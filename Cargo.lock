@@ -131,7 +131,6 @@ dependencies = [
 name = "tests"
 version = "0.1.0"
 dependencies = [
- "anyhow",
  "num-bigint",
  "serde_json",
  "witnesscalc-adapter",
