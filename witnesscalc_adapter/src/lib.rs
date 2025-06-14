@@ -82,12 +82,6 @@ const WITNESSCALC_BUILD_SCRIPT: &str = include_str!("../clone_witnesscalc.sh");
 
 pub fn build_and_link(circuits_dir: &str) {
     let target = env::var("TARGET").expect("Cargo did not provide the TARGET environment variable");
-    if target.contains("android") {
-        let android_ndk = env::var("ANDROID_NDK").expect("ANDROID_NDK not set");
-        if android_ndk.is_empty() {
-            panic!("ANDROID_NDK must be non-empty");
-        }
-    }
 
     let out_dir = env::var("OUT_DIR").expect("OUT_DIR not set");
     let lib_dir = Path::new(&out_dir)

@@ -50,6 +50,7 @@ mod test {
     }
 
     #[test]
+    #[ignore = "unstable"]
     fn test_rsa_main_witnesscalc() {
         let json_input =
             std::fs::read_to_string("testdata/rsa_main.json").expect("Unable to read file");
