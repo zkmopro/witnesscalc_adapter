@@ -210,14 +210,39 @@ pub fn build_and_link(circuits_dir: &str) {
 
     let circuit_names_semicolon = circuit_names.join(";");
 
-    Command::new("make")
+    let make_process = Command::new("make")
         .env("CIRCUIT_NAMES", circuit_names_semicolon)
         .arg(witnesscalc_build_target)
         .current_dir(&witnesscalc_path)
-        .spawn()
-        .expect("Failed to spawn make arm64_host")
-        .wait()
-        .expect("make arm64_host errored");
+        .output()
+        .expect("Failed to execute make arm64_host");
+
+    if !make_process.status.success() {
+        eprintln!(
+            "Make command failed with exit code: {}",
+            make_process.status
+        );
+        eprintln!("stdout: {}", String::from_utf8_lossy(&make_process.stdout));
+        eprintln!("stderr: {}", String::from_utf8_lossy(&make_process.stderr));
+
+        // Check if any of the required libraries were actually built despite the error
+        let lib_dir = witnesscalc_path.join("package").join("lib");
+        let mut all_libs_exist = true;
+
+        for circuit_name in &circuit_names {
+            let lib_path = lib_dir.join(format!("libwitnesscalc_{}.a", circuit_name));
+            if !lib_path.exists() {
+                eprintln!("Warning: Library {} was not built", lib_path.display());
+                all_libs_exist = false;
+            }
+        }
+
+        if !all_libs_exist {
+            panic!("Make command failed and required libraries are missing");
+        } else {
+            eprintln!("Warning: Make command failed but required libraries exist. Continuing...");
+        }
+    }
 
     // Link the witnesscalc library for the circuit
     circuit_names.iter().for_each(|circuit_name| {
