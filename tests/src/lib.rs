@@ -9,6 +9,7 @@ mod test {
     witnesscalc_adapter::witness!(multiplier2);
     witnesscalc_adapter::witness!(keccak256_256_test);
     witnesscalc_adapter::witness!(rsa_main);
+    witnesscalc_adapter::witness!(sha256);
 
     #[test]
     fn test_witnesscalc() {
@@ -48,6 +49,23 @@ mod test {
             end.duration_since(start)
         );
     }
+
+    #[test]
+    fn test_sha256_witnesscalc() {
+        let mut inputs = HashMap::new();
+        inputs.insert("in".to_string(), vec![0u8.to_string(); 512]);
+
+        let black_box_inputs = std::hint::black_box(inputs);
+        use std::time::Instant;
+        let start = Instant::now();
+        let _ = sha256_witness(&convert_inputs_to_json(black_box_inputs));
+        let end = Instant::now();
+        println!(
+            "Time taken for sha256: {:?}",
+            end.duration_since(start)
+        );
+    }
+
 
     #[test]
     #[ignore = "unstable"]
