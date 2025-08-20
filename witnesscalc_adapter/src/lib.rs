@@ -1,6 +1,10 @@
 pub use paste;
 pub use serde_json;
-use std::{env, fs, path::Path, process::Command};
+use std::{
+    env, fs,
+    path::{Path, PathBuf},
+    process::Command,
+};
 
 pub mod convert_type;
 pub use convert_type::*;
@@ -162,6 +166,9 @@ pub fn build_and_link(circuits_dir: &str) {
         .filter(|path| path.extension().is_some() && path.extension().unwrap() == "cpp")
         .collect::<Vec<_>>();
 
+    let mut v2_1_0_circuit_files: Vec<PathBuf> = Vec::new();
+    let mut v2_2_0_circuit_files: Vec<PathBuf> = Vec::new();
+
     // Copy each circuit .cpp and .dat into witnesscalc/src, replacing any existing files
     circuit_files.iter().for_each(|path| {
         let circuit_name = path.file_stem().unwrap().to_str().unwrap();
@@ -178,8 +185,71 @@ pub fn build_and_link(circuits_dir: &str) {
         let circuit_cpp = circuit_cpp + "\n}";
         let circuit_cpp_name = witnesscalc_path.join("src").join(circuit_name);
         let circuit_cpp_dest = circuit_cpp_name.with_extension("cpp");
-        fs::write(&circuit_cpp_dest, circuit_cpp).expect("Failed to write circuit .cpp file");
+        fs::write(&circuit_cpp_dest, &circuit_cpp).expect("Failed to write circuit .cpp file");
 
+        let circuit_cpp_str = &circuit_cpp;
+        if circuit_cpp_str.contains("uint get_size_of_bus_field_map() {return 0;}") {
+            v2_2_0_circuit_files.push(path.clone());
+        } else {
+            v2_1_0_circuit_files.push(path.clone());
+        }
+    });
+
+    build_for_circuits_with_different_versions(
+        &v2_1_0_circuit_files,
+        &witnesscalc_path,
+        &witnesscalc_build_target,
+    );
+    if v2_2_0_circuit_files.len() > 0 {
+        Command::new("git")
+            .arg("checkout")
+            .arg("v2.2.0")
+            .current_dir(&witnesscalc_path)
+            .spawn()
+            .expect("Failed to spawn git checkout v2.2.0")
+            .wait()
+            .expect("git checkout v2.2.0 errored");
+        build_for_circuits_with_different_versions(
+            &v2_2_0_circuit_files,
+            &witnesscalc_path,
+            &witnesscalc_build_target,
+        );
+    }
+
+    // Link the C++ standard library. This is necessary for Rust tests to run on the host,
+    // non-host targets may require a specific way of linking (e.g., through linking flags in xcode)
+    #[cfg(target_os = "macos")]
+    {
+        println!("cargo:rustc-link-lib=c++"); // macOS default
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        println!("cargo:rustc-link-lib=stdc++"); // Linux or other platforms
+    }
+    // Link the gmp and fr libraries
+    println!("cargo:rustc-link-lib=static=gmp");
+    println!("cargo:rustc-link-lib=static=fr");
+    // Specify the path to the witnesscalc library for the linker
+    println!(
+        "cargo:rustc-link-search=native={}",
+        lib_dir.to_string_lossy()
+    );
+
+    if !(env::var("CARGO_CFG_TARGET_OS").unwrap().contains("ios")
+        || env::var("CARGO_CFG_TARGET_OS").unwrap().contains("android"))
+    {
+        println!("cargo:rustc-link-lib=dylib=fr");
+        println!("cargo:rustc-link-lib=dylib=gmp");
+    }
+}
+
+fn build_for_circuits_with_different_versions(
+    circuit_files: &Vec<PathBuf>,
+    witnesscalc_path: &Path,
+    witnesscalc_build_target: &str,
+) {
+    circuit_files.iter().for_each(|path| {
+        let circuit_name = path.file_stem().unwrap().to_str().unwrap();
         //Find a witnesscalc_template.cpp template file in the src. Replace all the @CIRCUIT_NAME@ inside it with the circuit name and write it to the src directory, replacing "template" in the name with the circuit name
         let template_path = witnesscalc_path
             .join("src")
@@ -210,45 +280,50 @@ pub fn build_and_link(circuits_dir: &str) {
 
     let circuit_names_semicolon = circuit_names.join(";");
 
-    Command::new("make")
+    let make_process = Command::new("make")
         .env("CIRCUIT_NAMES", circuit_names_semicolon)
         .arg(witnesscalc_build_target)
         .current_dir(&witnesscalc_path)
-        .spawn()
-        .expect("Failed to spawn make arm64_host")
-        .wait()
-        .expect("make arm64_host errored");
+        .output()
+        .expect("Failed to execute make arm64_host");
+
+    if !make_process.status.success() {
+        eprintln!(
+            "Make command failed with exit code: {}",
+            make_process.status
+        );
+        eprintln!("stdout: {}", String::from_utf8_lossy(&make_process.stdout));
+        eprintln!("stderr: {}", String::from_utf8_lossy(&make_process.stderr));
+
+        // Check if any of the required libraries were actually built despite the error
+        let lib_dir = witnesscalc_path.join("package").join("lib");
+        let mut all_libs_exist = true;
+
+        for circuit_name in &circuit_names {
+            let lib_path = lib_dir.join(format!("libwitnesscalc_{}.a", circuit_name));
+            if !lib_path.exists() {
+                eprintln!("Warning: Library {} was not built", lib_path.display());
+                all_libs_exist = false;
+            }
+        }
+
+        if !all_libs_exist {
+            panic!("Make command failed and required libraries are missing");
+        } else {
+            eprintln!("Warning: Make command failed but required libraries exist. Continuing...");
+        }
+    }
 
     // Link the witnesscalc library for the circuit
     circuit_names.iter().for_each(|circuit_name| {
         println!("cargo:rustc-link-lib=static=witnesscalc_{}", circuit_name);
     });
 
-    // Link the C++ standard library. This is necessary for Rust tests to run on the host,
-    // non-host targets may require a specific way of linking (e.g., through linking flags in xcode)
-    #[cfg(target_os = "macos")]
-    {
-        println!("cargo:rustc-link-lib=c++"); // macOS default
-    }
-    #[cfg(not(target_os = "macos"))]
-    {
-        println!("cargo:rustc-link-lib=stdc++"); // Linux or other platforms
-    }
-    // Link the gmp and fr libraries
-    println!("cargo:rustc-link-lib=static=gmp");
-    println!("cargo:rustc-link-lib=static=fr");
-    // Specify the path to the witnesscalc library for the linker
-    println!(
-        "cargo:rustc-link-search=native={}",
-        lib_dir.to_string_lossy()
-    );
     if !(env::var("CARGO_CFG_TARGET_OS").unwrap().contains("ios")
         || env::var("CARGO_CFG_TARGET_OS").unwrap().contains("android"))
     {
         circuit_names.iter().for_each(|circuit_name| {
             println!("cargo:rustc-link-lib=dylib=witnesscalc_{}", circuit_name);
         });
-        println!("cargo:rustc-link-lib=dylib=fr");
-        println!("cargo:rustc-link-lib=dylib=gmp");
     }
 }

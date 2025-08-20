@@ -4,8 +4,9 @@
 
 This project provides a Rust adapter for compiling and linking [Circom circuit witness generator C++ sources](https://docs.circom.io/getting-started/computing-the-witness/#computing-the-witness-with-c) into a native library for target platforms (e.g., mobile devices). It includes macros and functions to facilitate the integration of witness generation into Rust codebases.
 
-> [!WARNING]  
-> It does not support Circom versions 2.2.0 and above.
+> [!INFO]  
+> This project supports Circom v2.2.0 and above.
+> For details on witness calculation, please see the [witnesscalc-v2.2.0 branch](https://github.com/zkmopro/witnesscalc/tree/v2.2.0).
 
 ## Requirements
 
