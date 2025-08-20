@@ -60,12 +60,8 @@ mod test {
         let start = Instant::now();
         let _ = sha256_witness(&convert_inputs_to_json(black_box_inputs));
         let end = Instant::now();
-        println!(
-            "Time taken for sha256: {:?}",
-            end.duration_since(start)
-        );
+        println!("Time taken for sha256: {:?}", end.duration_since(start));
     }
-
 
     #[test]
     #[ignore = "unstable"]
