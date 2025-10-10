@@ -37,6 +37,10 @@ macro_rules! witness {
         }
         $crate::paste::item! {
             pub fn [<$x _witness>](json_input: &str) -> $crate::__macro_deps::anyhow::Result<Vec<u8>> {
+                // FFI return codes
+                const WITNESSCALC_OK: std::ffi::c_int = 0x0;
+                const WITNESSCALC_ERROR_SHORT_BUFFER: std::ffi::c_int = 0x2;
+
                 println!("Generating witness for circuit {}", stringify!($x));
                 unsafe {
                     let json_input = std::ffi::CString::new(json_input).map_err(|e| $crate::__macro_deps::anyhow::anyhow!("Failed to convert JSON input to CString: {}", e))?;
@@ -45,33 +49,65 @@ macro_rules! witness {
                     let circuit_buffer = [<$x _CIRCUIT_DATA>].as_ptr() as *const std::ffi::c_char;
                     let circuit_size = [<$x _CIRCUIT_DATA>].len() as std::ffi::c_ulong;
 
-                    //TODO dynamically allocate the buffer?
-                    let mut wtns_buffer = vec![0u8; 100 * 1024 * 1024]; // 8 MB buffer
-                    let mut wtns_size: std::ffi::c_ulong = wtns_buffer.len() as std::ffi::c_ulong;
-
                     let mut error_msg = vec![0u8; 256]; // Error message buffer
                     let error_msg_ptr = error_msg.as_mut_ptr() as *mut std::ffi::c_char;
 
-                    let result =  [<witnesscalc_ $x>](
+                    // Two-pass dynamic allocation:
+                    // Pass 1: Probe with small buffer to query required size
+                    let mut probe_buffer = vec![0u8; 1024]; // 1 KB probe buffer
+                    let mut wtns_size: std::ffi::c_ulong = probe_buffer.len() as std::ffi::c_ulong;
+
+                    let result = [<witnesscalc_ $x>](
                         circuit_buffer,
                         circuit_size,
                         json_input.as_ptr(),
                         json_size,
-                        wtns_buffer.as_mut_ptr() as *mut _,
+                        probe_buffer.as_mut_ptr() as *mut _,
                         &mut wtns_size as *mut _,
-                        error_msg.as_mut_ptr() as *mut _,
+                        error_msg_ptr,
                         error_msg.len() as u64,
                     );
 
-                    if result != 0 {
+                    // Pass 2: If buffer too small, allocate exact size and retry
+                    let final_buffer = if result == WITNESSCALC_ERROR_SHORT_BUFFER {
+                        // wtns_size now contains the required minimum size
+                        let required_size = wtns_size as usize;
+                        println!("Witness requires {} bytes, allocating and retrying...", required_size);
+
+                        let mut wtns_buffer = vec![0u8; required_size];
+                        let mut wtns_size: std::ffi::c_ulong = required_size as std::ffi::c_ulong;
+
+                        let result = [<witnesscalc_ $x>](
+                            circuit_buffer,
+                            circuit_size,
+                            json_input.as_ptr(),
+                            json_size,
+                            wtns_buffer.as_mut_ptr() as *mut _,
+                            &mut wtns_size as *mut _,
+                            error_msg_ptr,
+                            error_msg.len() as u64,
+                        );
+
+                        if result != WITNESSCALC_OK {
+                            let error_string = std::ffi::CStr::from_ptr(error_msg_ptr)
+                                .to_string_lossy()
+                                .into_owned();
+                            return Err($crate::__macro_deps::anyhow::anyhow!("Witness generation failed: {}", error_string));
+                        }
+
+                        wtns_buffer[..wtns_size as usize].to_vec()
+                    } else if result == WITNESSCALC_OK {
+                        // Success on first try with probe buffer (small witness)
+                        probe_buffer[..wtns_size as usize].to_vec()
+                    } else {
+                        // Other error
                         let error_string = std::ffi::CStr::from_ptr(error_msg_ptr)
                             .to_string_lossy()
                             .into_owned();
-                        return Err($crate::__macro_deps::anyhow::anyhow!("Proof generation failed: {}", error_string));
-                    }
+                        return Err($crate::__macro_deps::anyhow::anyhow!("Witness generation failed: {}", error_string));
+                    };
 
-                    let wtns_buffer = &wtns_buffer[..wtns_size as usize];
-                    Ok(wtns_buffer.to_vec())
+                    Ok(final_buffer)
                 }
             }
         }
