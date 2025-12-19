@@ -239,12 +239,12 @@ pub fn build_and_link(circuits_dir: &str) {
     if v2_2_0_circuit_files.len() > 0 {
         Command::new("git")
             .arg("checkout")
-            .arg("v2.2.0")
+            .arg("secq256r1-support-v2.2.0")
             .current_dir(&witnesscalc_path)
             .spawn()
-            .expect("Failed to spawn git checkout v2.2.0")
+            .expect("Failed to spawn git checkout secq256r1-support-v2.2.0")
             .wait()
-            .expect("git checkout v2.2.0 errored");
+            .expect("git checkout secq256r1-support-v2.2.0 errored");
         build_for_circuits_with_different_versions(
             &v2_2_0_circuit_files,
             &witnesscalc_path,
