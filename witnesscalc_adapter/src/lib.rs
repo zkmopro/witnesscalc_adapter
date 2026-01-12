@@ -1,6 +1,7 @@
 pub use paste;
 pub use serde_json;
 use std::{
+    collections::HashMap,
     env, fs,
     path::{Path, PathBuf},
     process::Command,
@@ -8,6 +9,31 @@ use std::{
 
 pub mod convert_type;
 pub use convert_type::*;
+
+/// Sanitized env for shell commands, filtering out Xcode's CC/CXX/CPP that break GMP autoconf.
+fn sanitized_env() -> HashMap<String, String> {
+    const SAFE_VARS: &[&str] = &[
+        "PATH",
+        "HOME",
+        "USER",
+        "TMPDIR",
+        "TERM",
+        "LANG",
+        "LC_ALL",
+        "SDKROOT",
+        "DEVELOPER_DIR",
+        "IPHONEOS_DEPLOYMENT_TARGET",
+    ];
+    let mut env_map: HashMap<String, String> = env::vars()
+        .filter(|(k, _)| SAFE_VARS.contains(&k.as_str()))
+        .collect();
+    let path = env_map.get("PATH").map(|p| p.as_str()).unwrap_or("");
+    env_map.insert(
+        "PATH".into(),
+        format!("{}:/usr/bin:/bin:/usr/local/bin:/opt/homebrew/bin", path),
+    );
+    env_map
+}
 
 #[doc(hidden)]
 pub mod __macro_deps {
@@ -181,12 +207,13 @@ pub fn build_and_link(circuits_dir: &str) {
         _ => "host",
     };
 
-    // If the witnesscalc library is not built, build it
     let gmp_dir = witnesscalc_path.join("depends").join("gmp");
     let target_dir = gmp_dir.join(gmp_lib_folder);
     if !target_dir.exists() {
         Command::new("bash")
             .current_dir(&witnesscalc_path)
+            .env_clear()
+            .envs(sanitized_env())
             .arg("./build_gmp.sh")
             .arg(gmp_build_target)
             .spawn()
@@ -314,10 +341,12 @@ fn build_for_circuits_with_different_versions(
         .map(|path| path.file_stem().unwrap().to_str().unwrap())
         .collect::<Vec<_>>();
 
-    let circuit_names_semicolon = circuit_names.join(";");
+    let mut make_env = sanitized_env();
+    make_env.insert("CIRCUIT_NAMES".into(), circuit_names.join(";"));
 
     let make_process = Command::new("make")
-        .env("CIRCUIT_NAMES", circuit_names_semicolon)
+        .env_clear()
+        .envs(make_env)
         .arg(witnesscalc_build_target)
         .current_dir(&witnesscalc_path)
         .output()
