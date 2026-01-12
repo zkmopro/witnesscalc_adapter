@@ -341,12 +341,8 @@ fn build_for_circuits_with_different_versions(
         .map(|path| path.file_stem().unwrap().to_str().unwrap())
         .collect::<Vec<_>>();
 
-    let mut make_env = sanitized_env();
-    make_env.insert("CIRCUIT_NAMES".into(), circuit_names.join(";"));
-
     let make_process = Command::new("make")
-        .env_clear()
-        .envs(make_env)
+        .env("CIRCUIT_NAMES", circuit_names.join(";"))
         .arg(witnesscalc_build_target)
         .current_dir(&witnesscalc_path)
         .output()
