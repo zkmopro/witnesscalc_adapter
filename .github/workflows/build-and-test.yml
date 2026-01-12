@@ -104,7 +104,7 @@ jobs:
             - name: Run tests
               run: cd tests && cargo test
     test-macOS-x86_64:
-        runs-on: macos-13
+        runs-on: macos-15-intel
         if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.event.pull_request.base.repo.full_name
         steps:
             - name: install dependencies
