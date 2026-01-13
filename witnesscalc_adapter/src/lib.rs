@@ -23,6 +23,7 @@ fn sanitized_env() -> HashMap<String, String> {
         "SDKROOT",
         "DEVELOPER_DIR",
         "IPHONEOS_DEPLOYMENT_TARGET",
+        "ANDROID_NDK",
     ];
     let mut env_map: HashMap<String, String> = env::vars()
         .filter(|(k, _)| SAFE_VARS.contains(&k.as_str()))
