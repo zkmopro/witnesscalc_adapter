@@ -65,7 +65,7 @@ macro_rules! witness {
                         probe_buffer.as_mut_ptr() as *mut _,
                         &mut wtns_size as *mut _,
                         error_msg_ptr,
-                        error_msg.len() as u64,
+                        error_msg.len() as std::ffi::c_ulong,
                     );
 
                     // Pass 2: If buffer too small, allocate exact size and retry
@@ -85,7 +85,7 @@ macro_rules! witness {
                             wtns_buffer.as_mut_ptr() as *mut _,
                             &mut wtns_size as *mut _,
                             error_msg_ptr,
-                            error_msg.len() as u64,
+                            error_msg.len() as std::ffi::c_ulong,
                         );
 
                         if result != WITNESSCALC_OK {
