@@ -19,5 +19,5 @@ fi
 rm -rf $BUILD_DIR
 git clone https://github.com/zkmopro/witnesscalc.git $BUILD_DIR
 cd $BUILD_DIR
-git submodule update --init --recursive
 git checkout secq256r1-support
+git submodule update --init --recursive

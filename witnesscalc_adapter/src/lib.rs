@@ -245,6 +245,13 @@ pub fn build_and_link(circuits_dir: &str) {
             .expect("Failed to spawn git checkout secq256r1-support-v2.2.0")
             .wait()
             .expect("git checkout secq256r1-support-v2.2.0 errored");
+        Command::new("git")
+            .args(["submodule", "update", "--init", "--recursive"])
+            .current_dir(&witnesscalc_path)
+            .spawn()
+            .expect("Failed to spawn git submodule update")
+            .wait()
+            .expect("git submodule update errored");
         build_for_circuits_with_different_versions(
             &v2_2_0_circuit_files,
             &witnesscalc_path,
