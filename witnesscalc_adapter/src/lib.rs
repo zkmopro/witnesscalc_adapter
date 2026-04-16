@@ -52,8 +52,6 @@ macro_rules! witness {
                     let mut error_msg = vec![0u8; 256]; // Error message buffer
                     let error_msg_ptr = error_msg.as_mut_ptr() as *mut std::ffi::c_char;
 
-                    // Pre-allocate from .dat size to avoid running C++ witnesscalc
-                    // twice (two-pass probe fragments the heap → macOS segfault/freeze).
                     let initial_size = (circuit_size as usize) * 8;
                     let mut wtns_buffer: Vec<u8> = Vec::with_capacity(initial_size);
                     wtns_buffer.set_len(initial_size);
