@@ -53,8 +53,7 @@ macro_rules! witness {
                     let error_msg_ptr = error_msg.as_mut_ptr() as *mut std::ffi::c_char;
 
                     let initial_size = (circuit_size as usize) * 8;
-                    let mut wtns_buffer: Vec<u8> = Vec::with_capacity(initial_size);
-                    wtns_buffer.set_len(initial_size);
+                    let mut wtns_buffer = vec![0u8; initial_size];
                     let mut wtns_size: std::ffi::c_ulong = initial_size as std::ffi::c_ulong;
 
                     let result = [<witnesscalc_ $x>](
@@ -76,8 +75,7 @@ macro_rules! witness {
                         println!("Witness requires {} bytes (estimate {} too small), retrying...", required_size, initial_size);
                         drop(wtns_buffer);
 
-                        let mut exact_buffer: Vec<u8> = Vec::with_capacity(required_size);
-                        exact_buffer.set_len(required_size);
+                        let mut exact_buffer = vec![0u8; required_size];
                         let mut wtns_size: std::ffi::c_ulong = required_size as std::ffi::c_ulong;
 
                         let result = [<witnesscalc_ $x>](
